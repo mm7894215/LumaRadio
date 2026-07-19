@@ -31,6 +31,10 @@
 
 应用内更新器按当前芯片架构自动挑选对应的 dmg（API 线路与 latest-mac.yml 备用线路均按 `process.arch` 匹配）。Release 页面上的 Source code (zip/tar.gz) 是 GitHub 自动附加的，无法移除。
 
+## 签名与 Gatekeeper
+
+打包时通过 `scripts/adhoc-sign.js`（electron-builder afterPack 钩子）对 .app 做 ad-hoc 签名。用户首次打开会提示"无法验证开发者"，在 **系统设置 → 隐私与安全性 → 仍要打开** 放行一次即可；没有该签名则会报"已损坏，无法打开"且无放行入口。要彻底消除提示需 Apple Developer ID 证书 + 公证（electron-builder 原生支持，配 `CSC_LINK`、`APPLE_ID` 等 secrets）。
+
 ## 设计要点
 
 - **原子发布**：应用内更新器读 `releases/latest`，所以 release 先建为 draft（对外不可见），所有资产上传完成并校验后才 `--draft=false` 翻转上线，`releases/latest` 永远不会指向半成品。
