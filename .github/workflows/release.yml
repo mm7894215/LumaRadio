@@ -1,0 +1,217 @@
+name: release (macOS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.0.1) — must match package.json"
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Fail-fast checks + tag/draft creation run on ubuntu (~10s) so a version
+  # mismatch never burns expensive macOS minutes. The release is created as a
+  # DRAFT: drafts are excluded from releases/latest and the public releases
+  # page, so the in-app updater (which reads releases/latest and
+  # releases/latest/download/latest-mac.yml) never sees a half-published
+  # release. The publish step flips it live only after every asset is attached.
+  create-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Verify release version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const version = process.env.VERSION;
+          if (!/^\d+\.\d+\.\d+$/.test(version)) {
+            throw new Error(`Invalid release version: ${version}`);
+          }
+
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          const checks = [
+            ["package.json", pkg.version],
+            ["package-lock.json", lock.version],
+            ["package-lock.json root package", lock.packages?.[""]?.version],
+          ];
+          for (const [source, actual] of checks) {
+            if (actual !== version) {
+              throw new Error(`${source} version (${actual ?? "missing"}) does not match ${version}`);
+            }
+          }
+          NODE
+
+      # A failed release may be re-dispatched from the SAME commit and replace
+      # draft assets. A published release is immutable and can never be reused.
+      - name: Create or reuse matching draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+
+          ensure_tag_matches_workflow_sha() {
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+            tag_sha=$(git rev-list -n 1 "$tag")
+            if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $tag points to $tag_sha, not workflow commit $GITHUB_SHA. Re-run from the original commit or bump the version."
+              exit 1
+            fi
+          }
+
+          if release_json=$(gh release view "$tag" --json isDraft,targetCommitish 2>/dev/null); then
+            if [ "$(jq -r '.isDraft' <<<"$release_json")" != "true" ]; then
+              echo "::error::Release $tag is already published. Published assets are immutable; bump the version instead."
+              exit 1
+            fi
+
+            # GitHub does not materialize the tag ref for a draft release until
+            # publication. Create it explicitly so the build job can check out
+            # the immutable tag while the release is still safely private.
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              ensure_tag_matches_workflow_sha
+            else
+              draft_sha=$(jq -r '.targetCommitish' <<<"$release_json")
+              if [ "$draft_sha" != "$GITHUB_SHA" ]; then
+                echo "::error::Draft $tag targets $draft_sha, but this workflow is running from $GITHUB_SHA."
+                exit 1
+              fi
+              gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" >/dev/null
+            fi
+            echo "Reusing draft $tag from commit $GITHUB_SHA."
+          else
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              ensure_tag_matches_workflow_sha
+            else
+              gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" >/dev/null
+            fi
+            gh release create "$tag" --verify-tag --draft --title "LumaRadio v$VERSION" --generate-notes
+          fi
+
+  build-publish:
+    needs: create-release
+    runs-on: macos-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/v${{ inputs.version }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # Electron + electron-builder download their binaries (both arm64 and
+      # x64 dists for the universal build) into these caches — restoring them
+      # cuts several minutes off every run.
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            electron-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # typecheck + tests + build:web + smoke test against the local server.
+      # Leaves dist-web/ populated, so electron-builder below packages exactly
+      # the bytes that were verified — no second web build.
+      - name: Verify (typecheck, tests, web build, smoke test)
+        run: npm run verify
+
+      # --publish never: the publish config in package.json is only there so
+      # electron-builder emits latest-mac.yml (the in-app updater's fallback
+      # line reads releases/latest/download/latest-mac.yml); uploading is done
+      # explicitly below so the release stays a draft until complete.
+      - name: Build universal DMG + ZIP
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --mac dmg zip --universal --publish never
+
+      - name: Verify build artifacts
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          for artifact in \
+            "dist/LumaRadio-$VERSION-universal.dmg" \
+            "dist/LumaRadio-$VERSION-universal.zip" \
+            "dist/latest-mac.yml"; do
+            if [ ! -f "$artifact" ]; then
+              echo "::error::Missing build artifact: $artifact"
+              ls -la dist/ || true
+              exit 1
+            fi
+          done
+          # latest-mac.yml must advertise the version being released, or the
+          # updater's fallback line will offer users the wrong build.
+          yml_version=$(sed -nE 's/^version:[[:space:]]*//p' dist/latest-mac.yml | head -1)
+          if [ "$yml_version" != "$VERSION" ]; then
+            echo "::error::latest-mac.yml version ($yml_version) does not match $VERSION"
+            exit 1
+          fi
+          ls -la dist/
+
+      # --clobber so a re-run replaces draft assets instead of failing.
+      - name: Upload assets to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if [ "$(gh release view "$tag" --json isDraft --jq '.isDraft')" != "true" ]; then
+            echo "::error::Refusing to overwrite assets on published release $tag."
+            exit 1
+          fi
+          gh release upload "$tag" --clobber \
+            "dist/LumaRadio-$VERSION-universal.dmg" \
+            "dist/LumaRadio-$VERSION-universal.zip" \
+            dist/*.blockmap \
+            dist/latest-mac.yml
+
+      # Flip the draft live only after every required asset is attached, so
+      # releases/latest moves from the previous version to this one atomically.
+      # If anything above failed, the release stays an invisible draft.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          for asset in \
+            "LumaRadio-$VERSION-universal.dmg" \
+            "LumaRadio-$VERSION-universal.zip" \
+            "latest-mac.yml"; do
+            if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$asset"; then
+              echo "::error::Draft $tag is missing required asset: $asset"
+              exit 1
+            fi
+          done
+          gh release edit "$tag" --draft=false --latest
