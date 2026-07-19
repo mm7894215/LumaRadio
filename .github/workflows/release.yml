@@ -148,10 +148,10 @@ jobs:
       # electron-builder emits latest-mac.yml (the in-app updater's fallback
       # line reads releases/latest/download/latest-mac.yml); uploading is done
       # explicitly below so the release stays a draft until complete.
-      - name: Build universal DMG + ZIP
+      - name: Build arm64 + x64 DMGs
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npx electron-builder --mac dmg zip --universal --publish never
+        run: npx electron-builder --mac --publish never
 
       - name: Verify build artifacts
         env:
@@ -159,8 +159,8 @@ jobs:
         run: |
           set -euo pipefail
           for artifact in \
-            "dist/LumaRadio-$VERSION-universal.dmg" \
-            "dist/LumaRadio-$VERSION-universal.zip" \
+            "dist/LumaRadio-$VERSION-arm64.dmg" \
+            "dist/LumaRadio-$VERSION-x64.dmg" \
             "dist/latest-mac.yml"; do
             if [ ! -f "$artifact" ]; then
               echo "::error::Missing build artifact: $artifact"
@@ -168,13 +168,21 @@ jobs:
               exit 1
             fi
           done
-          # latest-mac.yml must advertise the version being released, or the
-          # updater's fallback line will offer users the wrong build.
+          # latest-mac.yml must advertise the version being released and list
+          # BOTH arch DMGs, or the updater's fallback line will offer users
+          # the wrong build.
           yml_version=$(sed -nE 's/^version:[[:space:]]*//p' dist/latest-mac.yml | head -1)
           if [ "$yml_version" != "$VERSION" ]; then
             echo "::error::latest-mac.yml version ($yml_version) does not match $VERSION"
             exit 1
           fi
+          for name in "LumaRadio-$VERSION-arm64.dmg" "LumaRadio-$VERSION-x64.dmg"; do
+            if ! grep -Fq "$name" dist/latest-mac.yml; then
+              echo "::error::latest-mac.yml does not list $name"
+              cat dist/latest-mac.yml
+              exit 1
+            fi
+          done
           ls -la dist/
 
       # --clobber so a re-run replaces draft assets instead of failing.
@@ -190,9 +198,8 @@ jobs:
             exit 1
           fi
           gh release upload "$tag" --clobber \
-            "dist/LumaRadio-$VERSION-universal.dmg" \
-            "dist/LumaRadio-$VERSION-universal.zip" \
-            dist/*.blockmap \
+            "dist/LumaRadio-$VERSION-arm64.dmg" \
+            "dist/LumaRadio-$VERSION-x64.dmg" \
             dist/latest-mac.yml
 
       # Flip the draft live only after every required asset is attached, so
@@ -206,8 +213,8 @@ jobs:
           set -euo pipefail
           tag="v$VERSION"
           for asset in \
-            "LumaRadio-$VERSION-universal.dmg" \
-            "LumaRadio-$VERSION-universal.zip" \
+            "LumaRadio-$VERSION-arm64.dmg" \
+            "LumaRadio-$VERSION-x64.dmg" \
             "latest-mac.yml"; do
             if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$asset"; then
               echo "::error::Draft $tag is missing required asset: $asset"

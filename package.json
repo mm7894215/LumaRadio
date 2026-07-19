@@ -22,7 +22,7 @@
     "web:open": "npm run build:web && node scripts/open-web.js",
     "build:runtime": "tsc -p tsconfig.runtime.json && tsc -p tsconfig.worker.json",
     "build:web": "npm run build:runtime && vite build",
-    "build:mac": "npm run build:web && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip --universal",
+    "build:mac": "npm run build:web && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
     "build:mac:dir": "npm run build:web && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dir",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
@@ -64,13 +64,8 @@
         {
           "target": "dmg",
           "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "universal"
+            "arm64",
+            "x64"
           ]
         }
       ]

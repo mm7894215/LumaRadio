@@ -25,10 +25,11 @@
 
 | 资产 | 用途 |
 | --- | --- |
-| `LumaRadio-{version}-universal.dmg` | 主分发包（应用内更新器 macOS 首选资产） |
-| `LumaRadio-{version}-universal.zip` | 备用分发包 |
+| `LumaRadio-{version}-arm64.dmg` | Apple Silicon 分发包 |
+| `LumaRadio-{version}-x64.dmg` | Intel 分发包 |
 | `latest-mac.yml` | 更新器备用线路元数据（`releases/latest/download/latest-mac.yml`） |
-| `*.blockmap` | 差量更新数据 |
+
+应用内更新器按当前芯片架构自动挑选对应的 dmg（API 线路与 latest-mac.yml 备用线路均按 `process.arch` 匹配）。Release 页面上的 Source code (zip/tar.gz) 是 GitHub 自动附加的，无法移除。
 
 ## 设计要点
 

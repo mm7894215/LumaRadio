@@ -378,11 +378,26 @@ function extractReleaseNotes(body) {
   });
   return notes.slice(0, 4);
 }
+function assetArchScore(name) {
+  const lower = String(name || '').toLowerCase();
+  const wantsArm = process.arch === 'arm64';
+  const hasArm = /arm64|aarch64/.test(lower);
+  const hasX64 = /x64|x86[_-]?64|intel/.test(lower);
+  if (wantsArm ? hasArm : hasX64) return 3;
+  if (/universal/.test(lower)) return 2;
+  if (!hasArm && !hasX64) return 1;
+  return 0;
+}
+function pickAssetByArch(list, pattern) {
+  const matches = list.filter(a => pattern.test(a && a.name || '') && assetArchScore(a && a.name || '') > 0);
+  if (!matches.length) return null;
+  return matches.reduce((best, item) => (assetArchScore(item.name) > assetArchScore(best.name) ? item : best), matches[0]);
+}
 function pickReleaseAsset(assets) {
   const list = Array.isArray(assets) ? assets : [];
   const platformPattern = process.platform === 'darwin' ? /\.dmg$/i : /\.(exe|msi)$/i;
-  const preferred = list.find(a => platformPattern.test(a && a.name || ''))
-    || list.find(a => /\.(zip|7z)$/i.test(a && a.name || ''))
+  const preferred = pickAssetByArch(list, platformPattern)
+    || pickAssetByArch(list, /\.(zip|7z)$/i)
     || list[0];
   if (!preferred) return null;
   const digest = assetDigestInfo(preferred);
@@ -682,11 +697,35 @@ function githubReleaseDownloadUrl(version, fileName) {
   const encodedName = String(fileName || '').split('/').map(part => encodeURIComponent(part)).join('/');
   return `https://github.com/${encodedOwner}/${encodedRepo}/releases/download/${tag}/${encodedName}`;
 }
+function parseLatestYmlFiles(text) {
+  const files = [];
+  let inFiles = false;
+  let current = null;
+  for (const line of String(text || '').split(/\r?\n/)) {
+    if (/^files:\s*$/.test(line)) { inFiles = true; continue; }
+    if (inFiles && /^\S/.test(line)) inFiles = false;
+    if (!inFiles) continue;
+    const url = line.match(/^\s*-\s*url:\s*(.+?)\s*$/);
+    if (url) {
+      current = { url: url[1].replace(/^['"]|['"]$/g, '') };
+      files.push(current);
+      continue;
+    }
+    if (!current) continue;
+    const kv = line.match(/^\s+(sha512|size):\s*(.+?)\s*$/);
+    if (kv) current[kv[1]] = kv[2].replace(/^['"]|['"]$/g, '');
+  }
+  return files;
+}
 function parseLatestYmlUpdateInfo(text, reason) {
   const latestVersion = normalizeVersion(yamlScalar(text, 'version') || APP_VERSION) || APP_VERSION;
-  const assetPath = yamlScalar(text, 'path') || yamlScalar(text, 'url') || `LumaRadio-${latestVersion}.dmg`;
-  const sha512 = normalizeDigest(yamlScalar(text, 'sha512'), 'sha512');
-  const size = Number(yamlScalar(text, 'size') || 0) || 0;
+  const fileEntries = parseLatestYmlFiles(text).map(entry => ({ ...entry, name: entry.url }));
+  const preferredFile = pickAssetByArch(fileEntries, /\.dmg$/i)
+    || pickAssetByArch(fileEntries, /\.(zip|7z)$/i);
+  const assetPath = (preferredFile && preferredFile.url)
+    || yamlScalar(text, 'path') || yamlScalar(text, 'url') || `LumaRadio-${latestVersion}.dmg`;
+  const sha512 = normalizeDigest(preferredFile ? (preferredFile.sha512 || '') : yamlScalar(text, 'sha512'), 'sha512');
+  const size = Number((preferredFile ? preferredFile.size : yamlScalar(text, 'size')) || 0) || 0;
   const releaseDate = yamlScalar(text, 'releaseDate');
   const downloadUrl = githubReleaseDownloadUrl(latestVersion, assetPath);
   const candidates = uniqueDownloadCandidates(downloadUrl);
