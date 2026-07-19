@@ -770,8 +770,8 @@ function updatePlaybackProgressUi() {
   if (timeDisplay) timeDisplay.textContent = formatProgramTime(currentSec) + ' / ' + (durationSec > 0 ? formatProgramTime(durationSec) : '0:00');
 }
 function bindPlaybackProgressEvents(audioEl) {
-  if (!audioEl || audioEl._mineradioProgressBound) return;
-  audioEl._mineradioProgressBound = true;
+  if (!audioEl || audioEl._lumaradioProgressBound) return;
+  audioEl._lumaradioProgressBound = true;
   ['loadedmetadata', 'durationchange', 'timeupdate', 'seeked', 'play', 'pause', 'emptied'].forEach(function(name){
     audioEl.addEventListener(name, updatePlaybackProgressUi);
   });

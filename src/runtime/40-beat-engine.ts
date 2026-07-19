@@ -446,7 +446,7 @@ function forceLoadingSettled(reason) {
   }
   uniforms.uLoading.value = 0;
   loadingShownAt = 0;
-  if (reason && window.__mineradioDebugLoading) console.log('[LoadingSettled]', reason);
+  if (reason && window.__lumaradioDebugLoading) console.log('[LoadingSettled]', reason);
 }
 function recoverVisualsAfterBackground(reason) {
   applyRendererPowerMode();
@@ -851,7 +851,7 @@ function beatMapSongKey(song) {
 
 function localBeatDiskKey(localKey, mode) {
   if (!localKey) return '';
-  return 'local:' + localKey + ':' + (mode === 'dj' ? 'dj' : 'mr');
+  return 'local:' + localKey + ':' + (mode === 'dj' ? 'dj' : 'cinematic');
 }
 
 function updateBeatDiskCacheStatus(data) {
@@ -906,7 +906,7 @@ async function writeBeatDiskCache(key, map, song, mode) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         key: key,
-        mode: mode || 'mr',
+        mode: mode || 'cinematic',
         provider: songProviderKey(song),
         title: song && song.name,
         artist: song && song.artist,
@@ -1018,7 +1018,7 @@ async function runQueueBeatPrefetch(fromIdx, token, seq, state) {
     });
     if (token !== beatMapToken || seq !== beatPrefetchToken || !map) return;
     beatMapCache[key] = map;
-    writeBeatDiskCache(key, map, song, 'mr');
+    writeBeatDiskCache(key, map, song, 'cinematic');
     console.log('队列节奏预热完成:', song.name || key, map.visualBeatCount || 0);
   } catch (err) {
     console.warn('queue beat prefetch failed:', err && err.message ? err.message : err);
@@ -2722,7 +2722,7 @@ function readLocalBeatMapCache() {
     Object.keys(raw).forEach(function(key){
       var entry = raw[key] || {};
       out[key] = { updatedAt: entry.updatedAt || 0 };
-      if (entry.mr) out[key].mr = unpackLocalBeatMap(entry.mr);
+      if (entry.cinematic) out[key].cinematic = unpackLocalBeatMap(entry.cinematic);
       if (entry.dj) out[key].dj = unpackLocalBeatMap(entry.dj);
     });
   } catch (e) {
@@ -2739,7 +2739,7 @@ function packLocalBeatCache(maxEntries) {
   var packed = {};
   entries.forEach(function(item){
     packed[item.key] = { updatedAt: item.entry.updatedAt || Date.now() };
-    if (item.entry.mr) packed[item.key].mr = packLocalBeatMap(item.entry.mr);
+    if (item.entry.cinematic) packed[item.key].cinematic = packLocalBeatMap(item.entry.cinematic);
     if (item.entry.dj) packed[item.key].dj = packLocalBeatMap(item.entry.dj);
   });
   return packed;
@@ -2783,12 +2783,12 @@ function localBeatVisualCount(map) {
 }
 function setLocalBeatPreference(localKey, mode) {
   if (!localKey) return;
-  localBeatMapPrefs[localKey] = mode === 'dj' ? 'dj' : 'mr';
+  localBeatMapPrefs[localKey] = mode === 'dj' ? 'dj' : 'cinematic';
   saveLocalBeatPrefs();
 }
 function applyLocalBeatMap(song, mode, map, fromCache) {
   if (!song || !song.localKey || !map) return false;
-  mode = mode === 'dj' ? 'dj' : 'mr';
+  mode = mode === 'dj' ? 'dj' : 'cinematic';
   song.localBeatMode = mode;
   setLocalBeatPreference(song.localKey, mode);
   if (mode === 'dj') {
@@ -2809,22 +2809,22 @@ function applyLocalBeatMap(song, mode, map, fromCache) {
   }
   hideBeatChip();
   notifyDesktopLyricsBeatMapReady();
-  if (fromCache) showToast((mode === 'dj' ? 'DJ' : 'MR') + ' 本地节奏缓存已载入');
+  if (fromCache) showToast((mode === 'dj' ? 'DJ' : '电影') + ' 本地节奏缓存已载入');
   return true;
 }
 function prepareLocalBeatAnalysis(song, audioUrl) {
   if (!song || !song.localKey || !audioUrl) return;
-  var preferred = localBeatMapPrefs[song.localKey] === 'dj' ? 'dj' : 'mr';
+  var preferred = localBeatMapPrefs[song.localKey] === 'dj' ? 'dj' : 'cinematic';
   var cached = getLocalBeatEntry(song.localKey, preferred) ||
-    getLocalBeatEntry(song.localKey, preferred === 'dj' ? 'mr' : 'dj');
+    getLocalBeatEntry(song.localKey, preferred === 'dj' ? 'cinematic' : 'dj');
   if (cached) {
-    applyLocalBeatMap(song, cached === getLocalBeatEntry(song.localKey, 'dj') ? 'dj' : 'mr', cached, true);
+    applyLocalBeatMap(song, cached === getLocalBeatEntry(song.localKey, 'dj') ? 'dj' : 'cinematic', cached, true);
     return;
   }
   var diskToken = trackSwitchToken;
   (async function(){
     var firstMode = preferred;
-    var secondMode = preferred === 'dj' ? 'mr' : 'dj';
+    var secondMode = preferred === 'dj' ? 'cinematic' : 'dj';
     var firstMap = await readBeatDiskCache(localBeatDiskKey(song.localKey, firstMode));
     var mode = firstMap ? firstMode : secondMode;
     var map = firstMap || await readBeatDiskCache(localBeatDiskKey(song.localKey, secondMode));
@@ -2843,7 +2843,7 @@ function openLocalBeatModal(song, audioUrl) {
   if (immersiveMode) setImmersiveMode(false);
   localBeatAnalysis.song = song || currentLocalSong;
   localBeatAnalysis.audioUrl = audioUrl || (audio && audio.src) || '';
-  localBeatAnalysis.mode = (localBeatAnalysis.song && localBeatMapPrefs[localBeatAnalysis.song.localKey] === 'dj') ? 'dj' : 'mr';
+  localBeatAnalysis.mode = (localBeatAnalysis.song && localBeatMapPrefs[localBeatAnalysis.song.localKey] === 'dj') ? 'dj' : 'cinematic';
   localBeatAnalysis.active = false;
   setLocalBeatStatus('', '');
   updateLocalBeatModal();
@@ -2855,12 +2855,12 @@ function closeLocalBeatModal() {
 }
 function selectLocalBeatMode(mode) {
   if (localBeatAnalysis.active) return;
-  localBeatAnalysis.mode = mode === 'dj' ? 'dj' : 'mr';
+  localBeatAnalysis.mode = mode === 'dj' ? 'dj' : 'cinematic';
   updateLocalBeatModal();
 }
 function updateLocalBeatModal() {
   var song = localBeatAnalysis.song || currentLocalSong || {};
-  var mode = localBeatAnalysis.mode === 'dj' ? 'dj' : 'mr';
+  var mode = localBeatAnalysis.mode === 'dj' ? 'dj' : 'cinematic';
   var modal = document.querySelector('#local-beat-modal .local-beat-modal');
   if (modal) modal.classList.toggle('analyzing', !!localBeatAnalysis.active);
   var title = document.getElementById('local-beat-title');
@@ -2868,13 +2868,13 @@ function updateLocalBeatModal() {
   if (title) title.textContent = song.name || '本地歌曲';
   if (sub) {
     var cachedBits = [];
-    if (song.localKey && getLocalBeatEntry(song.localKey, 'mr')) cachedBits.push('MR 已缓存');
+    if (song.localKey && getLocalBeatEntry(song.localKey, 'cinematic')) cachedBits.push('电影分析已缓存');
     if (song.localKey && getLocalBeatEntry(song.localKey, 'dj')) cachedBits.push('DJ 已缓存');
     sub.textContent = cachedBits.length ? cachedBits.join(' / ') : '选择一种电影视角分析方式';
   }
-  var mr = document.getElementById('local-beat-tab-mr');
+  var cinematicTab = document.getElementById('local-beat-tab-cinematic');
   var dj = document.getElementById('local-beat-tab-dj');
-  if (mr) mr.classList.toggle('active', mode === 'mr');
+  if (cinematicTab) cinematicTab.classList.toggle('active', mode === 'cinematic');
   if (dj) dj.classList.toggle('active', mode === 'dj');
   var desc = document.getElementById('local-beat-desc');
   if (desc) desc.textContent = mode === 'dj'
@@ -2912,7 +2912,7 @@ async function startLocalBeatAnalysis(mode) {
   var song = localBeatAnalysis.song || currentLocalSong;
   var audioUrl = localBeatAnalysis.audioUrl || (song && song.localUrl) || (audio && audio.src) || '';
   mode = mode || localBeatAnalysis.mode;
-  mode = mode === 'dj' ? 'dj' : 'mr';
+  mode = mode === 'dj' ? 'dj' : 'cinematic';
   if (!song || !song.localKey || !audioUrl || localBeatAnalysis.active) return;
   var cached = getLocalBeatEntry(song.localKey, mode);
   if (cached) {
@@ -2925,7 +2925,7 @@ async function startLocalBeatAnalysis(mode) {
   localBeatAnalysis.token++;
   var localToken = localBeatAnalysis.token;
   updateLocalBeatModal();
-  setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' 分析准备中...', 'warn');
+  setLocalBeatStatus((mode === 'dj' ? 'DJ' : '电影') + ' 分析准备中...', 'warn');
   try {
     var map = null;
     if (mode === 'dj') {
@@ -2944,17 +2944,17 @@ async function startLocalBeatAnalysis(mode) {
       currentBeatMap = null;
       beatMapNextIdx = 0;
       resetBeatCameraSync(audio ? audio.currentTime : 0);
-      var mrToken = beatMapToken;
-      map = await analyzeAudioBeats(audioUrl, audio && isFinite(audio.duration) ? audio.duration : 0, mrToken, { background:false, song: song });
-      if (localToken !== localBeatAnalysis.token || mrToken !== beatMapToken) return;
-      if (!map) throw new Error('MR analysis returned empty map');
+      var analysisToken = beatMapToken;
+      map = await analyzeAudioBeats(audioUrl, audio && isFinite(audio.duration) ? audio.duration : 0, analysisToken, { background:false, song: song });
+      if (localToken !== localBeatAnalysis.token || analysisToken !== beatMapToken) return;
+      if (!map) throw new Error('Cinematic analysis returned empty map');
     }
     storeLocalBeatEntry(song.localKey, mode, map, song);
     applyLocalBeatMap(song, mode, map, false);
     localBeatAnalysis.active = false;
-    setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' 分析完成: ' + localBeatVisualCount(map) + ' 个主拍');
+    setLocalBeatStatus((mode === 'dj' ? 'DJ' : '电影') + ' 分析完成: ' + localBeatVisualCount(map) + ' 个主拍');
     updateLocalBeatModal();
-    showToast((mode === 'dj' ? 'DJ' : 'MR') + ' 本地节奏分析完成');
+    showToast((mode === 'dj' ? 'DJ' : '电影') + ' 本地节奏分析完成');
     setTimeout(function(){
       if (!localBeatAnalysis.active) closeGsapModal(document.getElementById('local-beat-modal'));
     }, 900);
@@ -2983,7 +2983,7 @@ function smoothBeatMapHandoff(songId, map, token, song) {
     hideBeatChip();
     notifyDesktopLyricsBeatMapReady();
     showToast('节奏分析完成: ' + (map.visualBeatCount || (map.cameraBeats && map.cameraBeats.length) || 0) + ' 个视觉主拍');
-    writeBeatDiskCache(songId, map, song, 'mr');
+    writeBeatDiskCache(songId, map, song, 'cinematic');
     scheduleQueueBeatPrefetch(currentIdx, 1000);
   };
   scheduleVisualApply(apply, wait, 460);

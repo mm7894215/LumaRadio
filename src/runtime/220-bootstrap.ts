@@ -82,7 +82,7 @@ var renderPerfState = {
   lastRenderAt: 0,
   lastSampleAt: performance.now()
 };
-window.__mineradioPerf = renderPerfState;
+window.__lumaradioPerf = renderPerfState;
 var splashWarmRenderLast = 0;
 function isMainSceneCoveredBySplash() {
   return document.body.classList.contains('splash-active') && !document.body.classList.contains('splash-revealing');

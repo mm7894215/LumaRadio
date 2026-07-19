@@ -565,7 +565,7 @@ function compactBeatMapCachePayload(body) {
       provider: String(body.provider || '').slice(0, 32),
       title: String(body.title || '').slice(0, 160),
       artist: String(body.artist || '').slice(0, 160),
-      mode: String(body.mode || 'mr').slice(0, 32),
+      mode: String(body.mode || 'cinematic').slice(0, 32),
     },
     map,
   };

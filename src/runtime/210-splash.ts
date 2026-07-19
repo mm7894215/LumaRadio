@@ -727,14 +727,14 @@ function desktopLyricsPlaybackPayload() {
 function desktopLyricsActiveBeatMap() {
   var useDj = !!(djMode && djMode.active && currentDjBeatMap);
   return {
-    source: useDj ? 'dj' : 'mr',
+    source: useDj ? 'dj' : 'cinematic',
     map: useDj ? currentDjBeatMap : currentBeatMap
   };
 }
 function desktopLyricsBeatMapPayload(force) {
   var selected = desktopLyricsActiveBeatMap();
   var map = selected && selected.map;
-  var source = selected && selected.source || 'mr';
+  var source = selected && selected.source || 'cinematic';
   var cameraCount = map ? ((map.cameraBeats && map.cameraBeats.length) || (map.beats && map.beats.length) || (map.kicks && map.kicks.length) || 0) : 0;
   var pulseCount = map ? ((map.pulseBeats && map.pulseBeats.length) || (map.kicks && map.kicks.length) || 0) : 0;
   var duration = map && isFinite(map.duration) ? Number(map.duration) : 0;

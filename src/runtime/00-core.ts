@@ -82,7 +82,7 @@ var coverCropState = null, coverCropBound = false;
 var currentLocalSong = null;
 var lyricSourceMode = 'original';
 var originalLyricsState = { lines: [], hasNativeKaraoke: false, timingSource: 'none' };
-var localBeatAnalysis = { song:null, audioUrl:'', mode:'mr', active:false, token:0 };
+var localBeatAnalysis = { song:null, audioUrl:'', mode:'cinematic', active:false, token:0 };
 var likedSongMap = {}, likeBusyMap = {}, likeStatusToken = 0;
 var collectTargetSong = null, collectBusy = false;
 var uploadTipTimer = null, uploadTipAttempts = 0;
@@ -110,7 +110,7 @@ function markAppPerf(name) {
   try {
     var value = performance.now();
     appPerfMarks.push({ name: name, value: Math.round(value) });
-    if (performance && performance.mark) performance.mark('mineradio:' + name);
+    if (performance && performance.mark) performance.mark('lumaradio:' + name);
     if (appPerfMarks.length <= 16) console.debug('[LumaRadioPerf]', name, Math.round(value) + 'ms');
   } catch (e) {}
 }
@@ -945,7 +945,7 @@ function collectRuntimePerfSnapshot(now) {
     deepSleep: isDeepBackgroundMode()
   };
 }
-window.__mineradioPerfSnapshot = collectRuntimePerfSnapshot;
+window.__lumaradioPerfSnapshot = collectRuntimePerfSnapshot;
 function trimRuntimeCaches(reason, aggressive) {
   var protectedCovers = collectProtectedCoverUrls();
   var protectedBeats = collectProtectedBeatMapKeys();

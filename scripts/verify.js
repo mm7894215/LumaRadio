@@ -56,7 +56,7 @@ async function main() {
     'dist-web/index.html', 'dist-web/generated/player.js',
     'dist-web/assets/app.js', 'dist-web/assets/index.css',
     'public/icons/lumaradio.svg', 'public/icons/lumaradio-192.png', 'public/icons/lumaradio-512.png',
-    'build/icon.png', 'build/icon.icns', 'LICENSE', 'NOTICE.md'
+    'build/icon.png', 'build/icon.icns', 'docs/preview.png', 'LICENSE', 'NOTICE.md'
   ];
   required.forEach((file) => assert(fs.existsSync(path.join(root, file)), `存在 ${file}`));
 
@@ -71,6 +71,16 @@ async function main() {
   assert(indexHtml.split('\n').length < 1000 && !indexHtml.includes('Global State'), 'HTML 已缩减为纯界面模板');
   const runtimeFiles = fs.readdirSync(path.join(root, 'src/runtime')).filter((file) => file.endsWith('.ts'));
   assert(runtimeFiles.length >= 20, '播放器运行时已按领域拆分为 TypeScript 模块');
+  const brandAuditFiles = [
+    'index.html', 'server.js', 'desktop/main.js', 'desktop/preload.js',
+    'desktop/overlay-preload.js', 'public/desktop-lyrics.html',
+    ...runtimeFiles.map((file) => `src/runtime/${file}`),
+  ];
+  const brandAuditSource = brandAuditFiles
+    .map((file) => fs.readFileSync(path.join(root, file), 'utf8'))
+    .join('\n');
+  assert(!/mineradio|private visual radio|\bMR\b|local-beat-tab-mr/i.test(brandAuditSource), '运行时代码不残留旧产品品牌');
+  assert(indexHtml.includes('immersive visual radio') && indexHtml.includes('电影分析'), '启动页与节拍分析使用 LumaRadio 文案');
   assert(fs.statSync(path.join(root, 'dist-web', 'generated', 'player.js')).size > 500000, '完整播放器运行时已进入 Web 构建');
 
   ['server.js', 'desktop/main.js', 'desktop/preload.js', 'scripts/dev-web.js'].forEach((file) => {
