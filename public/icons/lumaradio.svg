@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">LumaRadio</title>
+  <desc id="desc">发光轨道环绕的抽象声波</desc>
+  <defs>
+    <radialGradient id="bg" cx="32%" cy="22%" r="92%">
+      <stop offset="0" stop-color="#202937"/>
+      <stop offset=".42" stop-color="#0b0f16"/>
+      <stop offset="1" stop-color="#030407"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ecfbff"/>
+      <stop offset=".34" stop-color="#9ae9ff"/>
+      <stop offset=".72" stop-color="#74a7ff"/>
+      <stop offset="1" stop-color="#e0bc74"/>
+    </linearGradient>
+    <linearGradient id="orbit" x1=".12" y1=".08" x2=".9" y2=".92">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".76"/>
+      <stop offset=".46" stop-color="#89ddff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#f4d28a" stop-opacity=".62"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="#ffffff" stroke-opacity=".045" stroke-width="2"/>
+  <ellipse cx="512" cy="512" rx="368" ry="196" fill="none" stroke="url(#orbit)" stroke-width="15" transform="rotate(-24 512 512)"/>
+  <circle cx="808" cy="294" r="18" fill="#f4d28a" filter="url(#glow)"/>
+  <g fill="url(#wave)" filter="url(#glow)">
+    <rect x="330" y="422" width="60" height="180" rx="30" opacity=".76"/>
+    <rect x="416" y="330" width="60" height="364" rx="30"/>
+    <rect x="502" y="252" width="60" height="520" rx="30"/>
+    <rect x="588" y="365" width="60" height="294" rx="30"/>
+    <rect x="674" y="446" width="60" height="132" rx="30" opacity=".72"/>
+  </g>
+  <path d="M280 756c128 82 323 111 471 18" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="8" stroke-linecap="round"/>
+</svg>

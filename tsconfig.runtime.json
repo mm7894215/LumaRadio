@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "module": "None",
+    "outFile": "public/generated/player.js",
+    "removeComments": false,
+    "skipLibCheck": true,
+    "noEmitOnError": true
+  },
+  "files": [
+    "src/runtime/00-core.ts",
+    "src/runtime/10-scene-engine.ts",
+    "src/runtime/20-particle-engine.ts",
+    "src/runtime/30-lyrics-engine.ts",
+    "src/runtime/40-beat-engine.ts",
+    "src/runtime/50-playlist-shelf-engine.ts",
+    "src/runtime/60-api.ts",
+    "src/runtime/70-search.ts",
+    "src/runtime/80-audio-engine.ts",
+    "src/runtime/90-queue.ts",
+    "src/runtime/100-lyrics.ts",
+    "src/runtime/110-playlists.ts",
+    "src/runtime/120-file-import.ts",
+    "src/runtime/130-visual-controls.ts",
+    "src/runtime/140-update.ts",
+    "src/runtime/150-auth.ts",
+    "src/runtime/160-home.ts",
+    "src/runtime/170-dynamic-libs.ts",
+    "src/runtime/180-gesture-engine.ts",
+    "src/runtime/190-window.ts",
+    "src/runtime/200-shell-ui.ts",
+    "src/runtime/210-splash.ts",
+    "src/runtime/220-bootstrap.ts"
+  ]
+}

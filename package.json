@@ -1,0 +1,104 @@
+{
+  "name": "lumaradio",
+  "productName": "LumaRadio",
+  "version": "1.0.0",
+  "description": "面向 Web 与 macOS 的沉浸式音乐播放器，融合天气电台、歌词舞台、粒子视觉和 3D 歌单架。",
+  "author": "Rocky",
+  "license": "GPL-3.0-only",
+  "keywords": ["music-player", "threejs", "electron", "pwa", "visualizer"],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "main": "desktop/main.js",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev-web.js",
+    "start": "npm run build:web && electron .",
+    "web": "npm run build:web && node server.js",
+    "web:open": "npm run build:web && node scripts/open-web.js",
+    "build:runtime": "tsc -p tsconfig.runtime.json && tsc -p tsconfig.worker.json",
+    "build:web": "npm run build:runtime && vite build",
+    "build:mac": "npm run build:web && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip --universal",
+    "build:mac:dir": "npm run build:web && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dir",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify": "npm run typecheck && npm run test && npm run build:web && node scripts/verify.js"
+  },
+  "build": {
+    "appId": "com.rocky.lumaradio",
+    "productName": "LumaRadio",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "desktop/**/*",
+      "dist-web/**/*",
+      "build/icon.png",
+      "build/icon.icns",
+      "server.js",
+      "dj-analyzer.js",
+      "package.json",
+      "LICENSE",
+      "NOTICE.md"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "artifactName": "LumaRadio-${version}-${arch}.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "LumaRadio ${version}",
+      "artifactName": "LumaRadio-${version}-${arch}.${ext}",
+      "backgroundColor": "#08090d",
+      "iconSize": 112,
+      "contents": [
+        { "x": 180, "y": 180, "type": "file" },
+        { "x": 480, "y": 180, "type": "link", "path": "/Applications" }
+      ]
+    }
+  },
+  "lumaradio": {
+    "update": {
+      "provider": "github",
+      "preview": false,
+      "preferMirrors": false
+    }
+  },
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "mpg123-decoder": "^1.0.3",
+    "NeteaseCloudMusicApi": "^4.32.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "music-metadata": "11.14.0"
+  }
+}

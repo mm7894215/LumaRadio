@@ -1,0 +1,37 @@
+{
+  "name": "LumaRadio",
+  "short_name": "LumaRadio",
+  "description": "面向 Web 与 macOS 的沉浸式视觉音乐播放器。",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#050608",
+  "theme_color": "#050608",
+  "lang": "zh-CN",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/lumaradio-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/lumaradio-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "搜索音乐",
+      "short_name": "搜索",
+      "url": "/?action=search",
+      "icons": [{ "src": "/icons/lumaradio-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
