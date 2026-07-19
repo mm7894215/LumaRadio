@@ -49,6 +49,7 @@
       "NOTICE.md"
     ],
     "asar": true,
+    "afterPack": "scripts/adhoc-sign.js",
     "publish": {
       "provider": "github",
       "owner": "mm7894215",
